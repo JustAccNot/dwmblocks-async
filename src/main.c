@@ -1,8 +1,13 @@
 #include "main.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "block.h"
 #include "cli.h"
@@ -13,6 +18,31 @@
 #include "util.h"
 #include "watcher.h"
 #include "x11.h"
+#include "socket.h"
+
+static char *create_pid_file(void) {
+    int fd;
+    char pidstr[32];
+    char path[256];
+	const char *runtime_dir;
+
+	runtime_dir = getenv("XDG_RUNTIME_DIR");
+
+    if (!runtime_dir ) {
+        return NULL;
+    }
+
+    snprintf(pidstr, sizeof(pidstr), "%ld", (long)getpid());
+    snprintf(path, sizeof(path), "%s/dwmblocks.pid", runtime_dir);
+
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd >= 0) {
+        write(fd, pidstr, strlen(pidstr));
+        close(fd);
+        return strdup(path);
+    }
+    return NULL;
+}
 
 static int init_blocks(block *const blocks, const unsigned short block_count) {
     for (unsigned short i = 0; i < block_count; ++i) {
@@ -77,8 +107,9 @@ static int refresh_callback(block *const blocks,
 }
 
 static int event_loop(block *const blocks, const unsigned short block_count,
-                      const bool is_debug_mode,
-                      x11_connection *const connection,
+                      const int mode,
+                      x11_connection *const x11_conn,
+                      socket_connection *const sock_conn,
                       signal_handler *const signal_handler) {
     timer timer = timer_new(blocks, block_count);
 
@@ -109,7 +140,7 @@ static int event_loop(block *const blocks, const unsigned short block_count,
 
         const bool has_status_changed = status_update(&status);
         if (has_status_changed &&
-            status_write(&status, is_debug_mode, connection) != 0) {
+            status_write(&status, mode, x11_conn, sock_conn) != 0) {
             return 1;
         }
     }
@@ -123,9 +154,27 @@ int main(const int argc, const char *const argv[]) {
         return 1;
     }
 
-    x11_connection *const connection = x11_connection_open();
-    if (connection == NULL) {
-        return 1;
+    x11_connection *x11_conn = NULL;
+    socket_connection *socket_conn = NULL;
+    int mode = 0;
+
+    if (cli_args.is_xcb_mode) {
+        x11_conn = x11_connection_open();
+        if (x11_conn == NULL) {
+            return 1;
+        }
+        mode = 1;
+    } else if (cli_args.is_socket_mode) {
+        socket_conn = status_socket_init();
+        if (socket_conn == NULL) {
+            return 1;
+        }
+        mode = 2;
+    }
+
+    char *pidfile = create_pid_file();
+    if (!pidfile) {
+        goto cleanup;
     }
 
 #define BLOCK(icon, command, interval, signal) \
@@ -137,7 +186,7 @@ int main(const int argc, const char *const argv[]) {
     int status = 0;
     if (init_blocks(blocks, block_count) != 0) {
         status = 1;
-        goto x11_close;
+        goto cleanup;
     }
 
     signal_handler signal_handler = signal_handler_new(
@@ -147,7 +196,7 @@ int main(const int argc, const char *const argv[]) {
         goto deinit_blocks;
     }
 
-    if (event_loop(blocks, block_count, cli_args.is_debug_mode, connection,
+    if (event_loop(blocks, block_count, mode, x11_conn, socket_conn,
                    &signal_handler) != 0) {
         status = 1;
     }
@@ -161,8 +210,17 @@ deinit_blocks:
         status = 1;
     }
 
-x11_close:
-    x11_connection_close(connection);
+cleanup:
+    if (cli_args.is_xcb_mode) {
+        x11_connection_close(x11_conn);
+    } else if (cli_args.is_socket_mode) {
+        status_socket_close(socket_conn);
+    }
+
+    if (pidfile) {
+        unlink(pidfile);
+        free(pidfile);
+    }
 
     return status;
 }

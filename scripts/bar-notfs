@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+
+notfs_pause=$(dunstctl is-paused 2>/dev/null)
+notfs_num=$(dunstctl count history 2>/dev/null)
+
+if [[ "$notfs_num" -gt 0 ]]; then
+    if [[ "$notfs_pause" == "true" ]]; then
+        printf " ^c#94a14f^ %s %s^d^" "$notfs_num" "M"
+    else
+        printf " ^c#94a14f^ %s^d^" "$notfs_num"
+    fi
+fi

@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+read -r _ _ _ _ default_network _ < <(ip route show default)
+
+if [[ -n "$default_network" ]] &&
+    ping -I "$default_network" -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
+    printf " ^c#40875c^%s^f6^^d^" ""
+    exit 0
+fi
+printf " ^c#874040^%s^f6^^d^" ""

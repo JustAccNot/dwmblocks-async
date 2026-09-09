@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+
+printf '^c#E0AF68^%s^f15^%(%H:%M)T^f5^' ""

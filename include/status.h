@@ -6,6 +6,7 @@
 #include "block.h"
 #include "config.h"
 #include "main.h"
+#include "socket.h"
 #include "util.h"
 #include "x11.h"
 
@@ -25,7 +26,7 @@ typedef struct {
 
 status status_new(const block* const blocks, const unsigned short block_count);
 bool status_update(status* const status);
-int status_write(const status* const status, const bool is_debug_mode,
-                 x11_connection* const connection);
+int status_write(const status* const status, const int mode,
+                 x11_connection* const x11_conn, socket_connection* const socket_conn);
 
 #endif  // STATUS_H

@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+
+printf "^c#A3BE8C^%s  %s^f15^%s %s^d^" \
+    "" \
+    "$(wpctl get-volume @DEFAULT_SINK@ 2>/dev/null |
+    awk '
+    {
+        vol =  int($2 * 100)
+        muted = ($3 != "[MUTED]") ? vol : "M"
+        printf("%s", muted)
+    }
+    ')" \
+    "" \
+    "$(wpctl get-volume @DEFAULT_SOURCE@ 2>/dev/null |
+    awk '
+    {
+        muted = ($3 != "[MUTED]") ? "A": "M"
+        printf("%s", muted)
+    }
+')"

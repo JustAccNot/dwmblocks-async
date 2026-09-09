@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+if [[ -d /sys/class/bluetooth ]] && ls -A /sys/class/bluetooth >/dev/null 2>&1; then
+    bt_check=$(bluetoothctl --timeout 2 show 2>/dev/null | grep -oP '(?<=Powered: )\w+')
+    if [[ "$bt_check" == "yes" ]]; then
+        printf " ^c#88C0D0^%s^f3^^d^" ""
+    elif [[ "$bt_check" == "no" ]]; then
+        printf " ^c#874040^%s^f3^^d^" ""
+    fi
+fi

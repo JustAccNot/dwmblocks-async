@@ -5,6 +5,8 @@
 
 typedef struct {
     bool is_debug_mode;
+    bool is_xcb_mode;
+    bool is_socket_mode;
 } cli_arguments;
 
 cli_arguments cli_parse_arguments(const char* const argv[], const int argc);

@@ -6,6 +6,7 @@
 
 #include "block.h"
 #include "config.h"
+#include "socket.h"
 #include "util.h"
 #include "x11.h"
 
@@ -63,15 +64,21 @@ bool status_update(status *const status) {
     return has_status_changed(status);
 }
 
-int status_write(const status *const status, const bool is_debug_mode,
-                 x11_connection *const connection) {
-    if (is_debug_mode) {
+int status_write(const status *const status, const int mode,
+                 x11_connection* const x11_conn, socket_connection* const socket_conn) {
+    if (mode == 0) {
         (void)printf("%s\n", status->current);
         return 0;
     }
 
-    if (x11_set_root_name(connection, status->current) != 0) {
-        return 1;
+    if (mode == 1) {
+        if (x11_set_root_name(x11_conn, status->current) != 0) {
+            return 1;
+        }
+    } else if (mode == 2) {
+        if (status_socket_write(socket_conn, status->current) != 0) {
+            return 1;
+        }
     }
 
     return 0;
