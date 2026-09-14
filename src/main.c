@@ -27,8 +27,7 @@ static char *create_pid_file(void) {
 	const char *runtime_dir;
 
 	runtime_dir = getenv("XDG_RUNTIME_DIR");
-
-    if (!runtime_dir ) {
+    if (runtime_dir == NULL || runtime_dir[0] == '\0') {
         return NULL;
     }
 
@@ -157,6 +156,7 @@ int main(const int argc, const char *const argv[]) {
     x11_connection *x11_conn = NULL;
     socket_connection *socket_conn = NULL;
     int mode = 0;
+    int status = 0;
 
     if (cli_args.is_xcb_mode) {
         x11_conn = x11_connection_open();
@@ -174,6 +174,7 @@ int main(const int argc, const char *const argv[]) {
 
     char *pidfile = create_pid_file();
     if (!pidfile) {
+        status = 1;
         goto cleanup;
     }
 
@@ -183,7 +184,6 @@ int main(const int argc, const char *const argv[]) {
 #undef BLOCK
     const unsigned short block_count = LEN(blocks);
 
-    int status = 0;
     if (init_blocks(blocks, block_count) != 0) {
         status = 1;
         goto cleanup;
